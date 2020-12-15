@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { randomBytes } = require('crypto');
-const { nextTick } = require('process');
+const fetch = require('node-fetch');
 
 const router = Router();
 
@@ -15,10 +15,35 @@ router.get('/', (req, res) => {
   res.json(postsList);
 });
 
+router.post('/events', (req, res) => {
+  console.log('Event: ', req.body);
+  res.send({});
+});
+
 router.post('/', (req, res, next) => {
   try {
     const postUID = randomBytes(4).toString('hex');
-    posts[postUID] = req.body.title;
+    const title = req.body.title;
+    posts[postUID] = title;
+
+    const payload = {
+      type: 'PostCreated',
+      data: {
+        id: postUID,
+        title,
+      },
+    };
+
+    const opts = {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+
+    fetch('http://localhost:1240/api/mq/', opts);
+
     res.json({
       id: postUID,
       status: 'created',
@@ -26,6 +51,11 @@ router.post('/', (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+router.post('/events', (req, res) => {
+  console.log('Event recieved');
+  res.send({});
 });
 
 module.exports = router;
